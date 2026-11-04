@@ -25,7 +25,8 @@ Every topic is a small, self-contained `main.go` program. The explanation lives 
   - [k. Standard Library APIs](#k-standard-library-apis)
   - [l. Context](#l-context)
   - [m. Concurrency](#m-concurrency)
-  - [n. Rate Limiting Middleware](#n-rate-limiting-middleware)
+  - [n. Sync Package](#n-sync-package)
+  - [o. Rate Limiting Middleware](#o-rate-limiting-middleware)
 - [Suggested Learning Path](#suggested-learning-path)
 - [Roadmap](#roadmap)
 
@@ -46,12 +47,12 @@ go version
 
 ## How to Run the Examples
 
-This directory has **no `go.mod`**. Each example is a standalone `package main`, so you run it by pointing `go run` at the file.
+The `golang/` directory has **no `go.mod`**. Each example is a standalone `package main`, so you run it by pointing `go run` at the file.
 
 > **Heads-up:** directory names contain spaces and dots (e.g. `d. pointers/1. basics`), so **always quote the path**.
 
 ```bash
-# from the golang/ directory
+cd golang
 go run "a. arrays/main.go"
 go run "e. functions/5. closures/main.go"
 go run "m. concurrency/6. workerpool/main.go"
@@ -89,7 +90,7 @@ These block and listen on port `8080`. Run them in one terminal and send request
 |---|---|
 | `k. api/6. http server` | `curl localhost:8080/hello` |
 | `k. api/7. serve mux` | `curl localhost:8080/hello` |
-| `n. rate limiting middleware` | `for i in {1..10}; do curl -s localhost:8080/api; echo; done` |
+| `o. rate limiting middleware` | `for i in {1..10}; do curl -s localhost:8080/api; echo; done` |
 
 ### Examples that touch files
 
@@ -123,6 +124,9 @@ golang/
 │   ├── 5. closures/
 │   └── 6. anonymous functions/
 ├── f. defer/
+│   ├── 1. basics/
+│   ├── 2. rules/
+│   └── 3. recover and defer/
 ├── g. types/
 │   ├── 1. basics/
 │   ├── 2. inheritance/
@@ -163,7 +167,11 @@ golang/
 │   ├── practice-mutex/
 │   ├── practice-semaphore/
 │   └── practice-unbuffered-1/
-├── n. rate limiting middleware/
+├── n. sync package/
+│   ├── 1. waitgroup/
+│   ├── 2. mutex/
+│   └── 3. others/
+├── o. rate limiting middleware/
 └── pending_items            # scratch list of topics still to cover
 ```
 
@@ -218,12 +226,11 @@ The letter prefixes (`a.`, `b.`, …) give the intended reading order, and numbe
 
 ### f. Defer
 
-📁 `f. defer/`
-
-- When deferred calls run: on return, at the end of the body, or on panic
-- **Arguments are evaluated immediately**, but the call runs later
-- Multiple defers run in **LIFO** order
-- Typical uses: cleanup, releasing resources, recovering from panics
+| Example | What it covers |
+|---|---|
+| `1. basics/` | When deferred calls run (on return, at the end of the body, or on panic); **LIFO** order; arguments are evaluated immediately but the call runs later; typical cleanup uses |
+| `2. rules/` | **Rule 1:** arguments are captured when the `defer` line runs, not when the call executes. **Rule 2:** a deferred function can modify **named return values**, but not unnamed ones (`namedReturn()` returns 11, `unnamedReturn()` returns 1) |
+| `3. recover and defer/` | Deferred functions still run while a panic unwinds the stack; `recover()` only works when called **directly** inside a deferred function |
 
 ### g. Types
 
@@ -305,9 +312,19 @@ A notes file on `context.Context`:
 | `practice-mutex/` | A thread-safe **round-robin load balancer**, built with `sync.RWMutex` and with `sync/atomic` |
 | `practice-semaphore/` | Process 50 jobs while allowing at most 5 to run at once, using a buffered channel as a **semaphore** |
 
-### n. Rate Limiting Middleware
+### n. Sync Package
 
-📁 `n. rate limiting middleware/`
+A closer look at the synchronization primitives in the `sync` package.
+
+| Example | What it covers |
+|---|---|
+| `1. waitgroup/` | `Add`, `Done`, and `Wait`. Common pitfalls: calling `Add` inside the goroutine, copying a `WaitGroup` by value, and a negative counter panic |
+| `2. mutex/` | `sync.Mutex` with a `SafeCounter` and the idiomatic `defer Unlock()`; deadlock causes; normal vs. starvation mode. `sync.RWMutex` with a read-heavy `Cache`, when to use `RLock` vs `Lock`, and writer priority |
+| `3. others/` | `sync.Map` and when it beats a mutex-guarded map; `sync.Once` for lazy singletons; an introduction to `sync.Pool` and `sync.Cond` |
+
+### o. Rate Limiting Middleware
+
+📁 `o. rate limiting middleware/`
 
 A small but complete HTTP server that applies the **token bucket** algorithm as middleware:
 
@@ -317,12 +334,12 @@ A small but complete HTTP server that applies the **token bucket** algorithm as 
 - A `sync.Mutex` protects the shared token count
 
 ```bash
-go run "n. rate limiting middleware/main.go"
+go run "o. rate limiting middleware/main.go"
 # in another terminal: the first 5 requests succeed, the rest get 429
 for i in {1..10}; do curl -s localhost:8080/api; echo; done
 ```
 
-This example brings together earlier topics: closures, methods, goroutines, mutexes, `time`, and `net/http`.
+This example brings together earlier topics: closures, methods, goroutines, `sync.Mutex`, `time`, and `net/http`.
 
 ---
 
@@ -333,8 +350,8 @@ Basics          a. arrays → b. slices → c. strings → d. pointers
 Functions       e. functions → f. defer
 Type system     g. types → h. methods → i. interfaces → j. errors
 Std library     k. api → l. context
-Concurrency     m. concurrency (core 1–6, then practice-*)
-Capstone        n. rate limiting middleware
+Concurrency     m. concurrency (core 1–6, then practice-*) → n. sync package
+Capstone        o. rate limiting middleware
 ```
 
 ---
@@ -344,6 +361,6 @@ Capstone        n. rate limiting middleware
 Topics still to cover, from `pending_items`:
 
 - [ ] Semaphores (deep dive)
-- [ ] Mutex (deep dive)
+- [x] Mutex (deep dive) — covered in `n. sync package/2. mutex`
 
 Other natural next steps: maps and structs, generics, `select` with timeouts, `context` cancellation in practice, `errgroup`, and table-driven tests.
